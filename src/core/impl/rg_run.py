@@ -4,7 +4,7 @@ import interface, rg_args, rg_ioc
 import utls.rg_var
 import setting
 import yaml,getopt
-import run_env 
+import run_env
 from utls.rg_io import rg_logger
 
 
@@ -40,7 +40,7 @@ def setting_debug() :
     log_level = logging.ERROR
     log_open  = True
     if len(sys.argv) >2 :
-        opts,args = getopt.getopt(sys.argv[2:],"qd:s:e:c:f:x:a:t:")
+        opts,args = getopt.getopt(sys.argv[2:],"qd:s:e:c:f:x:a:t:o:")
         for opt,val in opts:
             if opt == '-d' :
                 setting.debug       = True
