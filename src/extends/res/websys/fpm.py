@@ -80,7 +80,9 @@ class fpm_ctrl(interface.resource,res_utls):
         with   open(self.env,'w') as efile :
             for  k ,v in target.items() :
                 v = res_utls.value(v)
-                efile.write( "env[%s] = \"%s\" \n" %(k,v))
+                if v == "":
+                    continue
+                efile.write( "env[%s] = %s \n" %(k,v))
 
     def _start(self,context) :
         if os.path.exists(self.pid) :
