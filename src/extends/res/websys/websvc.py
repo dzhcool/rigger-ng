@@ -22,6 +22,7 @@ class nginx_conf_base(interface.resource):
             self.src           = res_utls.value(self.src)
             self.src           = tpldst_path(self.tpl,self.src)
             self.tpl           = res_utls.value(self.tpl)
+            self.testbin       = res_utls.value(self.testbin)
 
             self.tpl_res       = res.file_tpl()
             self.tpl_res.sudo  = self.sudo
@@ -43,6 +44,11 @@ class nginx_conf_base(interface.resource):
     def _config(self,context) :
         self.tpl_res._config(context)
         self.link_res._config(context)
+        cmdtpl = "$BIN -t"
+        cmd = Template(cmdtpl).substitute(
+                BIN = self.testbin
+                )
+        shexec.execmd(cmd)
         pass
 
     def _start(self,context) :

@@ -1,6 +1,6 @@
 #coding=utf8
 import re,logging
-import interface,utls.rg_var
+import interface,utls.rg_var,utls.rg_json
 import node
 import utls.dbc , utls.check
 import res.node
@@ -46,28 +46,44 @@ class vars(interface.resource):
     """
     定义变量
     !R.vars:
+        _json : "/path/data.json:/xpath/a/b/c"
         A: 1
         B: "hello"
     """
 
+    _json = None
     name = "vars"
     def depend_check(self,context) :
         pass
 
     def _allow(self,context):
         return True
+    def vars_data(self):
+        items    = self.__dict__
+        json_key = '_json'
+
+        if self._json is not None :
+            jfile = res_utls.value(self._json)
+            jargs = jfile.split(":")
+            data  = utls.rg_json.load_file(jargs[0],jargs[1])
+            items.update(data)
+        if json_key in items :
+            del items[json_key]
+
+        return  items
+
     def _before(self,context):
         # import pdb
         # pdb.set_trace()
-        items = self.__dict__
-        # run_struct.push("res.var")
-
-        for name , val in   items.items():
-            if re.match(r'__.+__',name):
-                continue
+        vars_data = self.vars_data()
+        for name , val in   vars_data.items():
             name= name.upper()
+            rg_logger.debug("%s =%s" %(name,val))
             setattr(context,name,val)
-        utls.rg_var.import_dict(items)
+        utls.rg_var.import_dict(vars_data)
+
+    def add(self,key,value):
+        self.__dict__[key] = value
 
     def _after(self,context):
         pass
@@ -75,7 +91,7 @@ class vars(interface.resource):
 
     def _info(self,context,level):
         if  level  <= 0  :
-            return 
+            return
         items = self.__dict__
         rgio.struct_out("vars:")
         for name , val in   items.items():
@@ -122,16 +138,23 @@ class system (interface.control_box,interface.base):
     """
     _sys:
         - !R.system
-            _name: "test"
+            _name: "init"
+            _limit :
+                envs   : "demo,online"
+                passwd : "rgisgood"
             _res:
-                - !R.vars
-                        TEST_CASE: "${HOME}/devspace/rigger-ng/test/main.py"
                 - !R.echo
-                    value : "${TEST_CASE}"
+                    value : "${PRJ_ROOT}"
     """
-    _name = ""
+    _name   = ""
+    _limit  = None
 
     def _allow(self,context):
+        if self._limit is not None :
+            for env in self._limit['envs'].split(","):
+                if context.have_env(env)  and context.passwd != self._limit['passwd']:
+                    rgio.struct_out("[ignore system] %s" %(self._name))
+                    return False
         return True
     def _before(self,context):
         rg_logger.info("system:%s _before " %(self._name))
@@ -182,11 +205,34 @@ class prj_main(interface.control_box, interface.base) :
     def _after(self,context):
         rg_logger.info("main: _after")
 
+
+class include(interface.resource):
+    """
+    !R.include
+        _path:
+            - "a.yaml"
+            - "b.yaml"
+    """
+    _path = None
+    def _allow(self,context):
+        return True
+    def _before(self,context):
+        import conf.run_conf
+        for path in self._path  :
+            if os.path.isfile(path) :
+                path = res_utls.value(path)
+                conf.run_conf.load(path)
+            else:
+                raise interface.rigger_exception("%s path not found! in !R.include" %path)
+
+
 class modul(interface.control_box,interface.base) :
     """
     !R.modul
         _name : "php-web"
         _res  :
+        _args :
+            X : "ABC"
             ...
     """
     _name = ""
@@ -196,16 +242,22 @@ class modul(interface.control_box,interface.base) :
         return tag
     def _info(self,context,level):
         if  level  <= 0  :
-            return 
+            return
         rgio.struct_out("modul : %s" %(self._name))
         interface.control_box._info(self,context,level)
 
+    def load_default_args(self):
+        if hasattr(self,"_args") and isinstance(self._args,dict):
+            args_vars = vars()
+            for key,value in self._args.items() :
+                args_vars.add(key,value)
+            self.push(args_vars)
     def _before(self,context):
-        # run_struct.push("modul %s" %(self._name))
         rg_logger.info("modul:%s _before" %(self._name))
         if self._sandbox:
             utls.rg_var.keep()
             context.keep()
+        self.load_default_args()
 
     def _after(self,context):
         if self._sandbox:
@@ -228,7 +280,6 @@ class using(interface.resource):
     def _allow(self,context):
         return True
     def _before(self,context):
-        # run_struct.push("using.module.%s" %self.modul)
         self.path       = res_utls.value(self.path)
         if len(self.path) > 0 :
             node.module_load(self.path)
@@ -237,6 +288,7 @@ class using(interface.resource):
         module         = utls.check.not_none(node.module_find(key), msg)
         #需要deepcopy , 避免对module 的使用污染!
         self.modul_obj = copy.deepcopy(module)
+        #压入传入数据
         if self.args is not None :
             self.modul_obj.push(self.args)
         self.modul_obj._before(context)
@@ -267,18 +319,21 @@ class using(interface.resource):
 
     def _info(self,context,level):
         if  level  <= 0  :
-            return 
+            return
         self.modul_obj._info(context,level)
+
+
 
 class env(interface.control_box,interface.base):
     """
 
     _env:
         - !R.env
-            _name    : "_dev"
-            _res :
+            _name : "dev"
+            _mix  : "base, _dev"
+            _res  :
                 - !R.vars
-                        TEST_CASE : "${PRJ_ROOT}/test/main.py"
+                        DB_NAME : "rigger_db"
     """
     _mix      = None
     def _resname(self):
@@ -288,13 +343,19 @@ class env(interface.control_box,interface.base):
         interface.control_box._info(self,context,level)
 
     def _before(self,context):
+        context.use_env(self._name)
         rg_logger.info("env:%s _before" %(self._name))
+        mix_obj = []
         if self._mix is not None :
             for key in  self._mix.split(",") :
-                obj = res.node.env_find(key)
-                if obj is None :
-                    raise interface.rigger_exception("env [%s] : mix [%s] not found " %(self._name,key))
-                self.append(obj)
+                obj =  interface.res_proxy(res.node.env_find,key,"env")
+                mix_obj.append(obj)
+                # obj = res.node.env_find(key)
+                # if obj is None :
+                #     raise interface.rigger_exception("env [%s] : mix [%s] not found " %(self._name,key))
+                # self.append(obj)
+        self.extend_left(mix_obj)
+
 
 
         # vars._before(self,context)

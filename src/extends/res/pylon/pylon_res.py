@@ -10,11 +10,11 @@ from string import *
 from res.base   import *
 import sys
 
-from  pylon.parser import  php_class_parser,php_rest_parser 
+from  pylon.parser import  php_class_parser,php_rest_parser
 
 _logger = logging.getLogger()
 
-        
+
 
 class pylon_autoload(interface.resource,res_utls):
     """build autoload data for pylon:
@@ -22,7 +22,6 @@ class pylon_autoload(interface.resource,res_utls):
         inlcude :  "/home/x/php:/usr/local/php/lib"
         dst     :  "${RUN_PATH}/autoload"
     """
-    sdk_base = "/home/"
     include  = ""
     relpath  = ""
     dst      = "${RUN_PATH}/autoload"
@@ -47,6 +46,8 @@ class pylon_autoload(interface.resource,res_utls):
         with   open(clspath_tmp,'w') as clspath_index  :
             with open(clsname_tmp,'w') as clsname_index :
                 for src in  src_paths :
+                    if len(src.strip()) == 0 :
+                        continue
                     self.build_php_index(src,clspath_index,clsname_index,self.relpath);
 
         shexec.execmd(Template("sort $SRC > $DST; rm $SRC ").substitute(SRC=clspath_tmp,DST=out_clspath))
@@ -73,20 +74,20 @@ class pylon_autoload(interface.resource,res_utls):
             for line in find_cls.readlines():
                 line = line.strip()
                 if not os.path.exists(line) :
-                    continue 
-                # if len(replace) > 0 :
-                #    line = line.replace(replace,'')
-
-                parser = php_class_parser()
-                parser.parse_file(line,replace,clspath_index,clsname_index)
+                    continue
+                if os.path.isfile(line) :
+                    parser = php_class_parser()
+                    parser.parse_file(line,replace,clspath_index,clsname_index)
 
 
 class pylon_router(interface.resource,res_utls):
     """
     !R.pylon_router
         include: "$${PRJ_ROOT}/src/apps/api:$${PRJ_ROOT}/src/apps/1"
+        version: 1
     """
     include = ""
+    version = 1 
     dst     = "${RUN_PATH}/router/"
     def _before(self,context):
         self.include = res_utls.value(self.include)
@@ -110,9 +111,9 @@ class pylon_router(interface.resource,res_utls):
             for line in phps_fobj.readlines():
                 line = line.strip()
                 if not os.path.exists(line) :
-                    continue 
+                    continue
                 parser = php_rest_parser()
-                parser.parse_file(line,dst_fobj)
+                parser.parse_file(line,dst_fobj,self.version)
 
 
 

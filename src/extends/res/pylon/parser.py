@@ -20,15 +20,22 @@ class php_rest_parser:
         self.rest_svcs = {}
 
 
-    def out2file(self,dstfile):
+    def out2file(self,dstfile,version):
         for k,v in self.rest_svcs.items():
-            dstfile.write( "%s : %s\n" %(k,v))
+            match = re.match('^.*\$.*$',k, re.IGNORECASE)
+            if match :
+                if version == 1 :
+                    dstfile.write( "/zzzzzz%s : %s\n" %(k,v))
+                if version == 2 :
+                    dstfile.write( "%s : %s\n" %(k,v))
+            else :
+                dstfile.write( "%s : %s\n" %(k,v))
 
-    def parse_file(self,srcfile,dstfile) :
+    def parse_file(self,srcfile,dstfile,version=1) :
         with  open(srcfile,'r') as sf:
             for line in sf.readlines():
                 self.parse(line)
-            self.out2file(dstfile)
+            self.out2file(dstfile,version)
 
     def parse(self, line) :
 
@@ -83,10 +90,13 @@ class php_class_parser:
         match = re.match('^\s*namespace\s+([\w\\\]+)\s*;',line, re.IGNORECASE)
         if match :
             self.namespace = match.group(1)
-            print(line)
 
         clsname = None
         match = re.match('^\s*class\s+(\w+).*$',line, re.IGNORECASE)
+        if match :
+            clsname = match.group(1)
+
+        match = re.match('^\s*trait\s+(\w+).*$',line, re.IGNORECASE)
         if match :
             clsname = match.group(1)
 

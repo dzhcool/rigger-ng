@@ -2,7 +2,6 @@
 import re , os , yaml, logging
 import interface
 import utls.dbc
-# import rg_res
 from utls.rg_io import rg_logger
 
 
@@ -20,7 +19,7 @@ class conf_loader:
         doc      = open(filepath).read()
         return  doc
     def load(self):
-        utls.dbc.must_exists(self.conf)
+        utls.dbc.must_file(self.conf)
         doc = open(self.conf,"r").read()
         doc = re.sub(r"""#!import *["'](.*)["']""",self.replace,doc)
         return doc

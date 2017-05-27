@@ -46,36 +46,37 @@ class shexec:
 
 
     @staticmethod
-    def execmd(cmd,check=True, okcode= [0] ,tag = None ):
+    def execmd(cmd,check=True, okcode= [0] ,tag = None, loglevel = 2 ):
         if shexec.have_cond :
             if shexec.cond_fun and shexec.cond_fun(cmd,tag):
                 return shexec.exec_fun(cmd,check,okcode)
-        return shexec.execmd_impl(cmd,check,okcode)
+        return shexec.execmd_impl(cmd,check,okcode,loglevel)
 
     @staticmethod
-    def execmd_impl(cmd,check=True, okcode= [0] ):
+    def execmd_impl(cmd,check=True, okcode= [0],loglevel= 2 ):
         # cmd_txt =  setting.tmp_file("sh")
         pid     = os.getpid()
         cmd_txt = "/tmp/rigger-ng_%s.cmd" %(pid)
         cmd     = re.sub(r'/bin/php ' ,'/bin/php  -d error_reporting="E_ALL&~E_NOTICE" ',cmd)
-        if setting.debug :
+        if setting.debug and setting.debug_level >= loglevel:
             rgio.simple_out(cmd)
 
         if shexec.DO  :
             shexec.out2txt(cmd,cmd_txt)
             with end_keeper(lambda : os.system( " rm %s " %cmd_txt ) )   as keeper :
                 os.system("chmod +x " +  cmd_txt)
-                if shexec.SUDO  :
+                uid = os.getuid()
+                if shexec.SUDO  and uid != 0 :
                     sudo_cmd    = "sudo " + cmd_txt
                     rcode       = os.system(sudo_cmd)
-                    if setting.debug  :
+                    if setting.debug and setting.debug_level >= loglevel:
                         rgio.simple_out("sudo system code: %s" % rcode )
                     if check and rcode not in  okcode :
                         raise interface.rigger_exception("shell execute have error! code: %d  cmd:\n%s " %(rcode ,cmd))
                     return 0
                 else:
                     rcode = os.system( cmd_txt)
-                    if setting.debug  :
+                    if setting.debug and setting.debug_level >= loglevel:
                         rgio.simple_out("system code: %s" % rcode )
                     if check and rcode not in  okcode :
                         raise interface.rigger_exception("shell execute have error! code: %d  cmd:\n%s" %(rcode,cmd) )

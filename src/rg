@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # from import module
 # from core.impl.rg_run import *
@@ -13,5 +13,6 @@ if __name__ == '__main__':
     import websys
     websys.setup()
     import core.impl.rg_run
-    core.impl.rg_run.main()
+    code = core.impl.rg_run.main()
+    exit(code)
 
