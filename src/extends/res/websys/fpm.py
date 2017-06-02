@@ -82,7 +82,7 @@ class fpm_ctrl(interface.resource,res_utls):
                 v = res_utls.value(v)
                 if v == "":
                     continue
-                efile.write( "env[%s] = \"%s \n" %(k,v))
+                efile.write( "env[%s] = \"%s\" \n" %(k,v))
 
     def _start(self,context) :
         if os.path.exists(self.pid) :
