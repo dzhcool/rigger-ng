@@ -10,6 +10,7 @@ from base import *
 from utls.tpl.tpl_var import safe_env_porp
 
 import  res.files
+import  socket
 
 class project(interface.resource,res_utls) :
     """
@@ -36,6 +37,7 @@ class project(interface.resource,res_utls) :
         prjdata['PRJ_ROOT'] = self.root
         prjdata['PRJ_NAME'] = self.name
         prjdata['BASE_RUN_PATH'] = self.root + "/run"
+        prjdata['HOSTNAME'] = socket.gethostname()
         utls.rg_var.import_dict(prjdata)
         safe_env_porp.ins().update(self.env.split(','))
     def _allow(self,context):
@@ -162,7 +164,7 @@ class system (interface.control_box,interface.base):
         utls.rg_var.keep()
         context.keep()
 
-        base_run = res_utls.value("${BASE_RUN_PATH}") 
+        base_run = res_utls.value("${BASE_RUN_PATH}")
 
         #support run_path var
         auto_vars = vars()
