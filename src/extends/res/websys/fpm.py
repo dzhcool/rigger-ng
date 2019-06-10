@@ -94,8 +94,15 @@ class fpm_ctrl(interface.resource,res_utls):
             isok   = True
         self._check_print(isok,messge)
     def _start(self,context) :
-        if os.path.exists(self.pid) :
-            return
+        timeout = 10  # 修复kill老fpm进程慢，导致start因pid文件存在退出的情况，睡眠10s以内等待老进程退出
+        while os.path.exists(self.pid) :
+            str = "wait for fpm exit: %ds" %(timeout)
+            print str
+            time.sleep(1)
+            timeout -= 1
+            if timeout <= 0 :
+                print "fpm kill failed"
+                return
         # tpl = "$BIN -c $INI -g $PID -y $CONF $args"
         tpl = "$BIN  --pid $PID -c $INI --fpm-config $CONF $args"
         cmd = Template(tpl).substitute(
