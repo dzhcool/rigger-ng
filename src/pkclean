@@ -1,0 +1,31 @@
+#!/bin/sh
+BASE_PATH=$(cd $(dirname $0); pwd)
+
+# 用来清理rg发布文件后 /data/x/pkgs 历史目录
+# param @project_name
+# param @exclude_tag, 仅支持保留一个tag
+PKGS_PATH=/data/x/pkgs
+
+projectName=$1
+excludeTag=$2
+usage='eg. pkclean project_name  exclude_tag'
+
+if [ -z "${projectName}" ]
+then
+    echo $usage
+    exit 1
+fi
+if [ -z "${excludeTag}" ]
+then
+    excludeTag='0.0.0.0'
+fi
+
+if [ ! -d "${PKGS_PATH}" ]
+then
+    echo "${PKGS_PATH} not exists"
+    exit 1
+fi
+
+cd ${PKGS_PATH}
+ls |egrep "^${projectName}\-([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)"|grep -v "${projectName}-${excludeTag}" |xargs -i rm -rf ${PKGS_PATH}/{}
+
